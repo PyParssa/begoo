@@ -110,7 +110,7 @@ Tone: ${
 3. If helpful, provide phonetic pronunciation in "transliteration" (e.g. Fingilish for Persian, Romaji for Japanese).`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite',
+        model: 'gemini-2.0-flash',
         contents: [
           {
             role: 'user',
@@ -164,7 +164,8 @@ Tone: ${
           engine: 'gemini-ai',
         };
       }
-    } catch {
+    } catch (err: any) {
+      console.error('[Gemini API Audio Error]:', err?.message || err);
       // Fall through to dedicated audio transcriber if single-pass failed
       try {
         const ai = new GoogleGenAI({
@@ -173,7 +174,7 @@ Tone: ${
         });
 
         const transcribeRes = await ai.models.generateContent({
-          model: 'gemini-3.5-transcribe',
+          model: 'gemini-2.0-flash',
           contents: {
             parts: [
               {
@@ -203,8 +204,8 @@ Tone: ${
         if (transcribed && !isSilentOrEmpty(transcribed)) {
           textToTranslate = transcribed;
         }
-      } catch {
-        // quiet
+      } catch (err: any) {
+        console.error('[Gemini API Transcribe Error]:', err?.message || err);
       }
     }
   }
@@ -229,8 +230,8 @@ Tone requirement: ${
 Provide a phonetic transliteration if helpful (e.g. Fingilish for Persian, Romaji for Japanese).`;
 
     const modelsToTry = [
-      { name: 'gemini-3.1-flash-lite', thinkingLevel: ThinkingLevel.MINIMAL },
-      { name: 'gemini-3.8-flash', thinkingLevel: ThinkingLevel.LOW },
+      { name: 'gemini-2.0-flash', thinkingLevel: ThinkingLevel.MINIMAL },
+      { name: 'gemini-2.0-flash', thinkingLevel: ThinkingLevel.LOW },
     ];
 
     for (const m of modelsToTry) {
@@ -279,8 +280,8 @@ Provide a phonetic transliteration if helpful (e.g. Fingilish for Persian, Romaj
             engine: 'gemini-ai',
           };
         }
-      } catch {
-        // Silently try next model
+      } catch (err: any) {
+        console.error(`[Gemini API Text Translation Error with ${m.name}]:`, err?.message || err);
       }
     }
   }

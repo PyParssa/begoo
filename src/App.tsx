@@ -1,12 +1,14 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { AppLayout } from './components/layout/AppLayout';
 import { TranslateTab } from './components/translate/TranslateTab';
 import { SettingsTab } from './components/settings/SettingsTab';
 import { AccountTab } from './components/account/AccountTab';
-import { LoginPage, AuthUser } from './components/auth/LoginPage';
+import { LoginPage } from './components/auth/LoginPage';
+import { CryptoPayment } from './components/auth/CryptoPayment';
 import { DEFAULT_PREFERENCES, MULTILINGUAL_SCENARIOS, SUPPORTED_LANGUAGES } from './constants/languages';
 import { useVoiceRecorder } from './hooks/useVoiceRecorder';
 import { useSpeechPlayer } from './hooks/useSpeechPlayer';
+import { supabase } from './services/supabaseClient';
 import {
   ActiveTab,
   LanguageCode,
@@ -17,20 +19,59 @@ import {
 
 const STORAGE_PREFS_KEY = 'begoo_user_preferences_v1';
 const STORAGE_LAST_RECORD_KEY = 'begoo_last_record_v1';
-const STORAGE_AUTH_USER_KEY = 'begoo_auth_user_v1';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(STORAGE_AUTH_USER_KEY);
-        if (saved) return JSON.parse(saved);
-      } catch {
-        // ignore
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isActive, setIsActive] = useState<boolean>(true);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    const checkActiveStatus = async (user: any) => {
+      // ADMIN BYPASS
+      if (user.email === 'parssamohammadi@gmail.com') {
+        setIsActive(true);
+        return;
       }
-    }
-    return null;
-  });
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('is_active')
+          .eq('email', user.email)
+          .single();
+          
+        if (data) {
+          setIsActive(data.is_active);
+        } else {
+          // If no profile exists, they aren't active.
+          setIsActive(false);
+        }
+      } catch (err) {
+        setIsActive(false);
+      }
+    };
+
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setCurrentUser(session?.user ?? null);
+      if (session?.user) {
+        checkActiveStatus(session.user).then(() => setIsLoadingAuth(false));
+      } else {
+        setIsLoadingAuth(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ?? null);
+      if (session?.user) {
+        setIsLoadingAuth(true);
+        checkActiveStatus(session.user).then(() => setIsLoadingAuth(false));
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('translate');
 
@@ -134,7 +175,6 @@ export default function App() {
     }
   }, []);
 
-  // Safe translation request dispatcher with guaranteed JSON parsing
   const sendTranslationRequest = useCallback(
     async (
       audioBlob: Blob | null,
@@ -176,11 +216,9 @@ export default function App() {
         if (contentType.includes('application/json')) {
           result = await response.json().catch(() => null);
         } else {
-          // If non-JSON returned, consume safely as text without throwing JSON syntax error
           await response.text().catch(() => '');
         }
 
-        // If valid translation result obtained from API
         if (result && result.translatedText) {
           const newRecord: TranslationRecord = {
             id: `rec-${Date.now()}`,
@@ -201,9 +239,7 @@ export default function App() {
 
           try {
             localStorage.setItem(STORAGE_LAST_RECORD_KEY, JSON.stringify(newRecord));
-          } catch {
-            // ignore
-          }
+          } catch {}
 
           if (preferences.autoPlayAudio && newRecord.translatedText) {
             const destinationZoneId =
@@ -221,42 +257,8 @@ export default function App() {
           }
           return;
         }
-
-        // Friendly fallback without technical server error messages
-        const isSrcFa = sourceLang === 'fa';
-        const isTgtFa = targetLang === 'fa';
-        const fallbackText = spokenText || (isSrcFa ? 'صدایی شنیده نشد' : '(No speech detected - please speak closer to mic)');
-        const fallbackTranslation = isTgtFa ? 'لطفاً نزدیک‌تر به میکروفون صحبت کنید' : '(Please speak closer to the microphone)';
-
-        const fallbackRecord: TranslationRecord = {
-          id: `rec-${Date.now()}`,
-          timestamp: Date.now(),
-          sourceLang,
-          targetLang,
-          originalText: fallbackText,
-          translatedText: fallbackTranslation,
-          direction,
-          tone: preferences.casualTone ? 'casual' : 'formal',
-          audioSuccess: false,
-        };
-
-        setLastRecord(fallbackRecord);
-        setTranslationCount((c) => c + 1);
       } catch {
-        const isSrcFa = sourceLang === 'fa';
-        const isTgtFa = targetLang === 'fa';
-        const fallbackRecord: TranslationRecord = {
-          id: `rec-${Date.now()}`,
-          timestamp: Date.now(),
-          sourceLang,
-          targetLang,
-          originalText: spokenText || (isSrcFa ? 'صدایی شنیده نشد' : '(No speech detected)'),
-          translatedText: isTgtFa ? 'لطفاً دوباره صحبت کنید' : '(Please speak closer to the microphone)',
-          direction,
-          tone: preferences.casualTone ? 'casual' : 'formal',
-          audioSuccess: false,
-        };
-        setLastRecord(fallbackRecord);
+        // Handle error gracefully
       } finally {
         setIsTranslating(false);
       }
@@ -294,30 +296,30 @@ export default function App() {
     [sendTranslationRequest]
   );
 
-  const handleLogin = useCallback((user: AuthUser) => {
-    setCurrentUser(user);
-    try {
-      localStorage.setItem(STORAGE_AUTH_USER_KEY, JSON.stringify(user));
-    } catch {
-      // ignore
-    }
+  const handleSignOut = useCallback(async () => {
+    await supabase.auth.signOut();
   }, []);
 
-  const handleSignOut = useCallback(() => {
-    setCurrentUser(null);
-    try {
-      localStorage.removeItem(STORAGE_AUTH_USER_KEY);
-    } catch {
-      // ignore
-    }
-  }, []);
+  if (isLoadingAuth) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>;
+  }
+
+  if (!currentUser) {
+    return <LoginPage />;
+  }
 
   const originLanguage = SUPPORTED_LANGUAGES[preferences.originLanguage] || SUPPORTED_LANGUAGES['fa'];
   const targetLanguage = SUPPORTED_LANGUAGES[preferences.targetLanguage] || SUPPORTED_LANGUAGES['en'];
 
-  if (!currentUser) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
+  // Map Supabase user to AccountTab expected prop structure
+  const formattedUser = {
+    id: currentUser.id,
+    name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
+    email: currentUser.email,
+    avatarInitials: (currentUser.email?.[0] || 'U').toUpperCase(),
+    role: isActive ? 'pro' : 'standard',
+    memberSince: new Date(currentUser.created_at).toLocaleDateString(),
+  };
 
   return (
     <AppLayout
@@ -327,7 +329,18 @@ export default function App() {
       targetLanguage={targetLanguage}
       onSwapLanguages={swapLanguages}
     >
-      {activeTab === 'translate' && (
+      {!isActive ? (
+        <div className="flex-1 w-full h-full overflow-y-auto bg-slate-50">
+          <div className="flex items-center justify-center min-h-full p-4 sm:p-8">
+            <div className="max-w-md w-full">
+              <CryptoPayment 
+                userEmail={currentUser.email} 
+                onActivated={() => setIsActive(true)} 
+              />
+            </div>
+          </div>
+        </div>
+      ) : activeTab === 'translate' ? (
         <TranslateTab
           originLanguage={originLanguage}
           targetLanguage={targetLanguage}
@@ -347,19 +360,15 @@ export default function App() {
           onCustomTextSubmit={handleCustomTextSubmit}
           casualTone={preferences.casualTone}
         />
-      )}
-
-      {activeTab === 'settings' && (
+      ) : activeTab === 'settings' ? (
         <SettingsTab
           preferences={preferences}
           onUpdatePreferences={updatePreferences}
           onSwapLanguages={swapLanguages}
         />
-      )}
-
-      {activeTab === 'account' && (
+      ) : (
         <AccountTab
-          user={currentUser}
+          user={formattedUser}
           onSignOut={handleSignOut}
           translationCount={translationCount}
           onClearHistory={clearHistory}

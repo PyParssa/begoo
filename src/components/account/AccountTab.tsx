@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 import { LogOut, CheckCircle2, Shield, Mic, Clock, ChevronRight, UserCheck } from 'lucide-react';
-import { AuthUser } from '../auth/LoginPage';
+
+export interface AccountUser {
+  id: string;
+  name: string;
+  email?: string;
+  avatarInitials?: string;
+  role?: string;
+  memberSince?: string;
+  isGuest?: boolean;
+}
 
 interface AccountTabProps {
-  user: AuthUser | null;
+  user: AccountUser | null;
   onSignOut: () => void;
   translationCount: number;
   onClearHistory?: () => void;
