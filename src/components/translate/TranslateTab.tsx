@@ -14,6 +14,8 @@ import {
 import { DraggableMic } from './DraggableMic';
 import { Language, TranslationDirection, TranslationRecord } from '../../types/translation';
 
+const MIRROR_MODE_STORAGE_KEY = 'begoo_mirror_mode_v1';
+
 interface TranslateTabProps {
   originLanguage: Language;
   targetLanguage: Language;
@@ -54,7 +56,14 @@ export const TranslateTab: React.FC<TranslateTabProps> = ({
   casualTone,
 }) => {
   // Mirror Mode is ON by default for tabletop face-to-face conversations
-  const [isMirrorMode, setIsMirrorMode] = useState<boolean>(true);
+  const [isMirrorMode, setIsMirrorMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(MIRROR_MODE_STORAGE_KEY);
+      return saved === null ? true : saved === 'true';
+    } catch {
+      return true;
+    }
+  });
   const [activeDragZone, setActiveDragZone] = useState<'origin' | 'target' | null>(null);
   const [copiedZone, setCopiedZone] = useState<'target' | 'origin' | null>(null);
   const [editingZone, setEditingZone] = useState<'target' | 'origin' | null>(null);
@@ -276,7 +285,17 @@ export const TranslateTab: React.FC<TranslateTabProps> = ({
       <div className="relative shrink-0 h-20 bg-slate-100/90 border-y border-slate-200/90 flex items-center justify-between px-3 z-30 shadow-2xs">
         {/* Left: Mirror Mode Toggle */}
         <button
-          onClick={() => setIsMirrorMode((m) => !m)}
+          onClick={() =>
+            setIsMirrorMode((current) => {
+              const next = !current;
+              try {
+                localStorage.setItem(MIRROR_MODE_STORAGE_KEY, String(next));
+              } catch {
+                // ignore unavailable storage
+              }
+              return next;
+            })
+          }
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
             isMirrorMode
               ? 'bg-white text-blue-700 shadow-xs border border-blue-200'
