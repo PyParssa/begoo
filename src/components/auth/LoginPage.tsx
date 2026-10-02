@@ -28,6 +28,9 @@ export const LoginPage: React.FC = () => {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: import.meta.env.VITE_APP_URL || window.location.origin,
+          },
         });
 
         if (error) throw error;

@@ -42,6 +42,7 @@ A modern, highly responsive real-time voice translation application powered by t
    ```env
    GEMINI_API_KEY=your_actual_gemini_api_key_here
    ```
+   Set `VITE_APP_URL` to the app's public origin (for example, `https://begoo.onrender.com`). In Supabase, set the same origin as the Site URL and add it to the allowed redirect URLs.
 
 4. **Start the Development Server**:
    ```bash

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { LogOut } from 'lucide-react';
 import { AppLayout } from './components/layout/AppLayout';
 import { TranslateTab } from './components/translate/TranslateTab';
 import { SettingsTab } from './components/settings/SettingsTab';
@@ -333,6 +334,16 @@ export default function App() {
         <div className="flex-1 w-full h-full overflow-y-auto bg-slate-50">
           <div className="flex items-center justify-center min-h-full p-4 sm:p-8">
             <div className="max-w-md w-full">
+              <div className="flex justify-end mb-3">
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign out
+                </button>
+              </div>
               <CryptoPayment 
                 userEmail={currentUser.email} 
                 onActivated={() => setIsActive(true)} 
