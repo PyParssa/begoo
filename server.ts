@@ -103,13 +103,11 @@ app.all('/api/*', (_req: Request, res: Response) => {
 // API Error handler to guarantee JSON
 app.use('/api', (err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.setHeader('Content-Type', 'application/json');
-  res.status(200).json({
-    success: true,
-    originalText: 'Hello',
-    translatedText: 'سلام',
-    tone: 'casual',
-    audioSuccess: true,
-    engine: 'mock-simulation',
+  console.error('[API Error]:', err?.message || err);
+  res.status(500).json({
+    success: false,
+    error: 'Internal Server Error',
+    message: err?.message || 'Unknown error occurred'
   });
 });
 
