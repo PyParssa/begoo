@@ -1,6 +1,6 @@
 {
-  "name": "Polyglot Push-to-Talk Voice Translator",
-  "description": "Bidirectional push-to-talk voice translation web app optimized for mobile with intuitive drag-to-talk zones.",
+  "name": "BeGoo",
+  "description": "Bidirectional voice translation web app optimized for mobile with intuitive drag-to-talk zones.",
   "requestFramePermissions": [
     "microphone"
   ],

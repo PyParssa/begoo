@@ -130,7 +130,7 @@ async function startServer() {
   }
 
   app.listen(port, () => {
-    console.log(`> Polyglot Translation Server listening on port ${port} (mode: ${isProd ? 'production' : 'development'})`);
+    console.log(`> BeGoo API Server listening on port ${port} (mode: ${isProd ? 'production' : 'development'})`);
   });
 }
 

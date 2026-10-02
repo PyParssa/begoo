@@ -1,4 +1,4 @@
-# Polyglot Push-to-Talk Voice Translator 🎙️🌍
+# BeGoo 🎙️🌍
 
 A modern, highly responsive real-time voice translation application powered by the Gemini AI API. Built with React, Vite, and Express, this application allows users to engage in natural, bidirectional spoken conversations across different languages with a seamless push-to-talk interface.
 
@@ -24,7 +24,7 @@ A modern, highly responsive real-time voice translation application powered by t
 1. **Clone the repository** (if you haven't already):
    ```bash
    git clone <your-repo-url>
-   cd polyglot-push-to-talk-voice-translator
+   cd begoo
    ```
 
 2. **Install dependencies**:
