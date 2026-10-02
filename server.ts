@@ -3,7 +3,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { executeTranslation } from './src/services/translatorService';
+import { executeTranslation, generateSpeechAudio } from './src/services/translatorService';
+import { SUPPORTED_LANGUAGES } from './src/constants/languages';
 import { LanguageCode, TranslationTone } from './src/types/translation';
 
 dotenv.config();
@@ -81,6 +82,22 @@ app.post('/api/translate', conditionalUpload, async (req: Request, res: Response
       latencyMs: 300,
       engine: 'gemini-ai',
     });
+  }
+});
+
+app.post('/api/speech', async (req, res) => {
+  const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+  const langCode = req.body?.langCode as LanguageCode;
+
+  if (!text || text.length > 2000 || !SUPPORTED_LANGUAGES[langCode]) {
+    return res.status(400).json({ success: false, error: 'Valid text and language are required.' });
+  }
+
+  try {
+    res.json(await generateSpeechAudio(text, langCode));
+  } catch (error: any) {
+    console.error('[Speech Generation Error]:', error?.message || error);
+    res.status(502).json({ success: false, error: 'Speech generation failed.' });
   }
 });
 
