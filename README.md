@@ -70,4 +70,4 @@ A modern, highly responsive real-time voice translation application powered by t
 
 ## 📄 License
 
-This project is open-source. Feel free to modify and distribute as needed.
+&copy; All Rights Reserved. This project is proprietary and confidential. Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited.
